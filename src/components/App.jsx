@@ -1,54 +1,95 @@
-import Contacts from 'pages/Contacts';
-import { useEffect, lazy } from 'react';
-import { useDispatch } from 'react-redux';
-import { Route, Routes } from 'react-router-dom';
-import Layout from './Layout';
-import { useAuth } from 'hooks/useAuth';
-import { RestrictedRoute } from './RestrictedRoute';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Routes, Route } from 'react-router-dom';
+import { refreshUser } from 'redux/auth/authOperations';
+import { Layout } from './Layout';
+import { Contacts } from './Pages/Contacts';
+import { WelcomePage } from './Pages/HomePage';
+import { Login } from './Pages/LoginPage';
+import { Register } from './Pages/RegisterPage';
 import { PrivateRoute } from './PrivateRoute';
-import { refreshUser } from 'redux/auth/auth-operations';
+import { RestrictedRoute } from './RestrictedRoute';
 
-const Login = lazy(() => import('pages/Login'));
-const Register = lazy(() => import('pages/Registration'));
+import * as React from 'react';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+
+const ColorModeContext = React.createContext({ toggleColorMode: () => {} });
 
 export const App = () => {
   const dispatch = useDispatch();
-  const { isRefreshing } = useAuth();
+  const { isRefreshing, isLoggedIn } = useSelector(state => state.auth);
+
+  const [mode, setMode] = React.useState('light');
+
+  const darkMode = useSelector(state => state.theme.darkMode);
+
+  React.useMemo(() => {
+    if (darkMode) {
+      setMode('dark');
+    } else {
+      setMode('light');
+    }
+  }, [darkMode]);
+
+  const colorMode = React.useMemo(
+    () => ({
+      toggleColorMode: () => {
+        setMode(prevMode => (prevMode === 'light' ? 'dark' : 'light'));
+      },
+    }),
+    []
+  );
+
+  const theme = React.useMemo(
+    () =>
+      createTheme({
+        palette: {
+          mode,
+        },
+      }),
+    [mode]
+  );
 
   useEffect(() => {
     dispatch(refreshUser());
   }, [dispatch]);
 
-  return isRefreshing ? (
-    <b>Refreshing user...</b>
-  ) : (
-    <>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Login />} />
-          <Route
-            path="/login"
-            element={
-              <RestrictedRoute component={<Login />} redirectTo="/contacts" />
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <RestrictedRoute
-                component={<Register />}
-                redirectTo="/contacts"
+  return (
+    <ColorModeContext.Provider value={colorMode}>
+      <ThemeProvider theme={theme}>
+        {!isRefreshing && (
+          <Routes>
+            <Route
+              path="/"
+              element={<Layout colorModeContext={ColorModeContext} />}
+            >
+              {!isLoggedIn && <Route index element={<WelcomePage />} />}
+              <Route
+                path="/contacts"
+                element={
+                  <PrivateRoute component={Contacts} redirectTo="/login" />
+                }
               />
-            }
-          />
-          <Route
-            path="/contacts"
-            element={
-              <PrivateRoute redirectTo="/login" component={<Contacts />} />
-            }
-          />
-        </Route>
-      </Routes>
-    </>
+              <Route
+                index
+                path="/register"
+                element={
+                  <RestrictedRoute
+                    component={Register}
+                    redirectTo="/contacts"
+                  />
+                }
+              />
+              <Route
+                path="/login"
+                element={
+                  <RestrictedRoute component={Login} redirectTo="/contacts" />
+                }
+              />
+            </Route>
+          </Routes>
+        )}
+      </ThemeProvider>
+    </ColorModeContext.Provider>
   );
 };

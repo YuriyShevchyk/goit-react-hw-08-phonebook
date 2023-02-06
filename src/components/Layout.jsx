@@ -1,14 +1,18 @@
+import { Box } from '@mui/material';
 import { Outlet } from 'react-router-dom';
-import { Suspense } from 'react';
-import NavBar from './NavBar/NavBar';
+import { NavBar } from './AppBar/AppBar';
 
-export default function Layout() {
+export const Layout = ({ colorModeContext }) => {
   return (
-    <>
-      <NavBar />
-      <Suspense fallback={null}>
-        <Outlet />
-      </Suspense>
-    </>
+    <Box
+      margin="0 auto"
+      sx={{
+        backgroundColor: 'background.paper',
+        minHeight: '100vh',
+      }}
+    >
+      <NavBar colorModeContext={colorModeContext} />
+      <Outlet />
+    </Box>
   );
-}
+};

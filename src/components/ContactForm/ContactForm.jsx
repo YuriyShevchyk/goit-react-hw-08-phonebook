@@ -1,95 +1,99 @@
-import { nanoid } from 'nanoid';
-import Button from '@mui/material/Button';
-import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { addContact } from 'redux/contacts/operations';
-import Typography from '@mui/material/Typography';
+import React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import { addContact } from 'redux/contacts/contactsOperations';
+import { onExistContact, onSuccesAddContact } from 'utils/notify';
+import { Box, Button, TextField } from '@mui/material';
+import { PersonAdd } from '@mui/icons-material';
+import { Container } from '@mui/system';
 
-export default function ContactForm() {
+const initialValues = {
+  name: '',
+  number: '',
+};
+
+const validationSchema = Yup.object().shape({
+  name: Yup.string().required('Name is required'),
+  number: Yup.string('Phone number must be a "Number" type').required(
+    'Please, enter valid Phone Number'
+  ),
+});
+
+export const ContactForm = () => {
   const dispatch = useDispatch();
+  const contactList = useSelector(state => state.contacts.items);
+  const formik = useFormik({
+    initialValues,
+    validationSchema,
+    onSubmit: (values, actions) => {
+      const findedContact = contactList.find(contact =>
+        contact.name.toLowerCase().includes(values.name.toLowerCase())
+      );
 
-  const [name, setName] = useState('');
-  const [number, setNumber] = useState('');
-
-  const onAddContact = data => {
-    const action = addContact(data);
-    dispatch(action);
-  };
-
-  const nameId = nanoid();
-  const numberId = nanoid();
-
-  const handelChange = e => {
-    const { name, value } = e.target;
-
-    switch (name) {
-      case 'name':
-        return setName(value);
-      case 'number':
-        return setNumber(value);
-      default:
+      if (findedContact) {
+        onExistContact(findedContact);
+        actions.resetForm();
         return;
-    }
-  };
-
-  const handleSubmit = e => {
-    e.preventDefault();
-    onAddContact({ name, number });
-    setName('');
-    setNumber('');
-  };
+      } else {
+        onSuccesAddContact(values);
+        dispatch(addContact(values, actions));
+        actions.resetForm();
+      }
+    },
+  });
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-      }}
-    >
-      <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-        <Typography component="div" variant="h5" sx={{ textAlign: 'center' }}>
-          Add Contacts
-        </Typography>
-        <TextField
-          margin="normal"
-          required
-          fullWidth
-          id={nameId}
-          label="Name"
-          value={name}
-          autoComplete="name"
-          autoFocus
-          name="name"
-          pattern="^[a-zA-Zа-яА-Я]+(([' -][a-zA-Zа-яА-Я ])?[a-zA-Zа-яА-Я]*)*$"
-          //helperText="Name may contain only letters, apostrophe, dash and spaces. For example Adrian, Jacob Mercer, Charles de Batz de Castelmore d'Artagnan"
-          onChange={handelChange}
-        />
-        <TextField
-          margin="normal"
-          required
-          fullWidth
-          id={numberId}
-          label="Number"
-          value={number}
-          onChange={handelChange}
-          type="tel"
-          name="number"
-          autoComplete="number"
-          pattern="\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}"
-          //helperText="Phone number must be digits and can contain spaces, dashes, parentheses and can start with +"
-        />
-        <Button
-          type="submit"
-          fullWidth
-          variant="contained"
-          sx={{ mt: 3, mb: 2 }}
-        >
-          Add Contacts
-        </Button>
+    <Container>
+      <Box
+        p={4}
+        mt={6}
+        mx="auto"
+        sx={{
+          maxWidth: '400px',
+          boxShadow: 3,
+        }}
+      >
+        <form onSubmit={formik.handleSubmit}>
+          <TextField
+            fullWidth
+            id="name"
+            name="name"
+            label="Name"
+            type="name"
+            value={formik.values.name}
+            onChange={formik.handleChange}
+            error={formik.touched.name && Boolean(formik.errors.name)}
+            helperText={formik.touched.name && formik.errors.name}
+            sx={{ mb: 4 }}
+          />
+
+          <TextField
+            fullWidth
+            id="number"
+            name="number"
+            label="Number"
+            type="text"
+            value={formik.values.number}
+            onChange={formik.handleChange}
+            error={formik.touched.number && Boolean(formik.errors.number)}
+            helperText={formik.touched.number && formik.errors.number}
+            sx={{ mb: 4 }}
+          />
+
+          <Button
+            variant="contained"
+            type="submit"
+            endIcon={<PersonAdd />}
+            sx={{
+              display: 'flex',
+              mx: 'auto',
+            }}
+          >
+            Add contact
+          </Button>
+        </form>
       </Box>
-    </Box>
+    </Container>
   );
-}
+};
